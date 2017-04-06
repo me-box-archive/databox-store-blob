@@ -3,11 +3,11 @@
   "version": "1.0.0",
   "description": "Datbox datastore for blob data",
   "config": {
-    "registry": "registry.iotdatabox.com"
+    "registry": "localhost:5000"
   },
   "scripts": {
     "test": "./node_modules/mocha/bin/mocha",
-    "start": "node ./src/main.js",
+    "start": "node --max-old-space-size=50  ./src/main.js",
     "build": "docker build -t databox/databox-store-blob .",
     "deploy": "docker tag databox/databox-store-blob $npm_package_config_registry/databox-store-blob && docker push $npm_package_config_registry/databox-store-blob",
     "build-arm": "docker build -f Dockerfile-arm -t databox/databox-store-blob-arm .",

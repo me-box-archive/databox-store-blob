@@ -30,6 +30,13 @@ of the
     Body Parameters: <startTimestamp> and <endTimestamp> for the range.
     Notes: will return the all data between the provided start and end timestamps for the provided datasourceid.
 
+    URL: /<datasourceid>/query
+    method: GET
+    Body Parameters: <query> a string containing a nedb json query 
+    Body Parameters: <limit> an integer max number of documents to return 
+    Body Parameters: <sort> a string containing a nedb json sort object
+    Notes: returns an array of documents 
+    
 ### Key value pairs
 
     URL: /<key>/kv/
@@ -96,7 +103,7 @@ Connect to a websocket client to `/ws`. Then subscribe for data using:
     URL: /<datasourceid>/ts/
     Method: POST
     Parameters: Raw JSON body containing elements as follows {data: <json blob to store>}
-    Notes: Stores a value a timestamp is added on insertion
+    Notes: If there is a timestamp field in data it is used otherwise a timestamp is added on insertion 
 
 ### Key value pairs
 
