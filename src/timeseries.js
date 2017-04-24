@@ -1,19 +1,30 @@
 /*jshint esversion: 6 */
 const Router = require('express').Router;
-const Datastore = require('nedb');
 
-const db = new Datastore({filename: '../database/datastore.db', autoload: true});
-db.ensureIndex({fieldName: 'datasource_id', unique: false});
-db.ensureIndex({fieldName: 'timestamp', unique: false});
-
-// TODO: Consider OOP-ing this whole thing
+const MongoClient = require('mongodb').MongoClient;
+let db = null;
+MongoClient.connect("mongodb://localhost:27017/db", function(err, mongo) {
+  if(!err) {
+    console.log("We are connected");
+	mongo.collection('timesseries', function(err, collection) {
+		if(!err) {
+			console.log("Timeseries collection created");
+			collection.createIndex( { "datasource_id": 1 }, { unique: false } );
+			collection.createIndex( { "timestamp": 1 }, { unique: false } );
+			db = collection;
+		}
+	});
+  } else {
+	  console.log("[ERROR] can't connect to mongo");
+  }
+});
 
 module.exports.api = function (subscriptionManager) {
 	let router = Router({mergeParams: true});
 
 	const latest = function (req, res, next) {
 		const datasource_id = req.params.datasourceid;
-		db.find({ datasource_id: datasource_id }).sort({ timestamp: -1 }).limit(1).exec(function (err, doc) {
+		db.find({ datasource_id: datasource_id }).limit(1).sort({ timestamp: -1 }).toArray(function (err, doc) {
 			if (err) {
 				console.log('[Error]::', req.originalUrl);
 				// TODO: Status code + document
@@ -27,7 +38,8 @@ module.exports.api = function (subscriptionManager) {
 	const since = function (req, res, next) {
 		const datasource_id = req.params.datasourceid;
 		const timestamp = req.body.startTimestamp;
-		db.find({ datasource_id, $where: function () { return this.timestamp >= timestamp; } }).sort({ timestamp: 1 }).exec(function (err, doc) {
+		console.log("SINCE", datasource_id, timestamp);
+		db.find({ 'datasource_id': datasource_id, 'timestamp':{$gte:timestamp} }).sort({ 'timestamp': 1 }).toArray(function (err, doc) {
 			if (err) {
 				console.log('[Error]::', req.originalUrl, timestamp);
 				// TODO: Status code + document
@@ -43,7 +55,7 @@ module.exports.api = function (subscriptionManager) {
 		const start = req.body.startTimestamp;
 		const end = req.body.endTimestamp;
 
-		db.find({ datasource_id, $where: function () { return this.timestamp >= start && this.timestamp <= end; } }).sort({ timestamp: 1 }).exec(function (err, doc) {
+		db.find({ 'datasource_id': datasource_id, 'timestamp':{$gte:start, $lte:end}}).sort({ timestamp: 1 }).toArray(function (err, doc) {
 			if (err) {
 				console.log('[Error]::', req.originalUrl, timestamp);
 				// TODO: Status code + document
@@ -56,9 +68,11 @@ module.exports.api = function (subscriptionManager) {
 
 	const index = function (req, res, next) {
 		const indexName = req.body.index;
-		db.ensureIndex({ fieldName: indexName }, function (err) {
+		let options = {};
+		options[indexName] = 1;
+		db.createIndex(options, function (err) {
 			if (err) {
-				console.log('[Error]::', req.originalUrl, timestamp);
+				console.log('[Error]::', err);
 				res.status(400).send(err);
 				return;
 			}
@@ -69,12 +83,12 @@ module.exports.api = function (subscriptionManager) {
 	const query = function (req, res, next) {
 		try{
 			const query = JSON.parse(req.body.query);
-			const limit = req.body.limit || -1;
+			const limit = req.body.limit || 0;
 			const sort = JSON.parse(req.body.sort || '{}');
 			console.log(query);
-			db.find(query).sort(sort).limit(limit).exec(function (err,docs) {
+			db.find(query).sort(sort).limit(limit).toArray(function (err,docs) {
 				if (err) {
-					console.log('[Error]::', req.originalUrl, timestamp);
+					console.log('[Error]::', err);
 					res.status(400).send(err);
 					return;
 				}
@@ -112,8 +126,8 @@ module.exports.api = function (subscriptionManager) {
 		
 		//trust the drivers timestamp
 		let timestamp = null;
-		if(req.body.timestamp && Number.isInteger(req.body.timestamp)) {
-			timestamp = req.body.timestamp;
+		if(req.body.data.timestamp && Number.isInteger(req.body.data.timestamp)) {
+			timestamp = req.body.data.timestamp;
 		} else {
 			timestamp = Date.now();
 		}
@@ -131,10 +145,8 @@ module.exports.api = function (subscriptionManager) {
 				res.status(400).send(err);
 				return;
 			}
-			res.send(doc);
+			res.send(doc.ops[0]);
 		});
-
-		console.log("New data written subscriptionManager.emit:",req.params.datasourceid + '/ts', data);
 		subscriptionManager.emit('/' + req.params.datasourceid + '/ts', data);
 	});
 

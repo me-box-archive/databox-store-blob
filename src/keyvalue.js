@@ -1,11 +1,22 @@
 const Router = require('express').Router;
-const Datastore = require('nedb');
 
-var db = new Datastore({filename: '../database/datastoreKV.db', autoload: true});
-db.ensureIndex({fieldName: 'key', unique: true});
-db.ensureIndex({fieldName: 'datasource_id', unique: false});
-
-// TODO: Consider OOP-ing this whole thing
+const MongoClient = require('mongodb').MongoClient;
+let db = null;
+MongoClient.connect("mongodb://localhost:27017/db", function(err, mongo) {
+  if(!err) {
+    console.log("We are connected");
+	mongo.collection('KV', function(err, collection) {
+		if(!err) {
+			console.log("KV collection created");
+			collection.createIndex( { "datasource_id": 1 }, { unique: false } );
+			collection.createIndex( { "key": 1 }, { unique: true } );
+			db = collection;
+		}
+	});
+  } else {
+	  console.log("[ERROR] can't connect to mongo");
+  }
+});
 
 module.exports.api = function (subscriptionManager) {
 	var router = Router({mergeParams: true});
@@ -26,7 +37,7 @@ module.exports.api = function (subscriptionManager) {
 				res.status(404).send({ status: 404, error: 'Document not found' });
 				return;
 			}
-
+			console.log("GET::",document);
 			res.send(document.data);
 		});
 	});
@@ -40,14 +51,15 @@ module.exports.api = function (subscriptionManager) {
 			data: data
 		};
 
-		db.update({ key }, doc, { upsert: true, returnUpdatedDocs: true }, function (err, numAffected, affectedDocuments, upsert) {
+		db.findOneAndUpdate({ key }, doc, { upsert: true, returnUpdatedDocs: true }, function (err, document) {
 			if (err) {
 				console.log("[Error]::", req.originalUrl, doc, err);
 				// TODO: Document
 				res.status(500).send({ status: 500, error: err });
 				return;
 			}
-			res.send(affectedDocuments.data);
+			console.log("POST::",document);
+			res.send(data);
 		});
 
 		subscriptionManager.emit('/' + key + '/kv', {

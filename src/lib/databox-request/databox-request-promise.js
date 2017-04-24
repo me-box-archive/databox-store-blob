@@ -56,7 +56,7 @@ module.exports = function (options,callback) {
         } else if (isExternalDevRequest) {
             //DEV mode external request.
             options.headers = {};
-            console.log("[databox-request] ExternalRequest " + options.uri);
+            //console.log("[databox-request] ExternalRequest " + options.uri);
             resolve(request(options,callback));
         } else if (isExternalRequest) {
             //
@@ -65,7 +65,7 @@ module.exports = function (options,callback) {
             // TODO::EXTERNAL REQUEST SHOULD BE ROOTED THROUGH THE DATABOX WHITELISTING PROXY THING (when its been written!!)
             options.headers = {};
             options.agent = undefined; //external request use the default agent.
-            console.log("[databox-request] ExternalRequest " + options.uri);
+            //console.log("[databox-request] ExternalRequest " + options.uri);
             resolve(request(options,callback));
         } else {
             //
@@ -75,7 +75,7 @@ module.exports = function (options,callback) {
             .then((macaroon)=>{
                 //do the request and call back when done
                 options.headers = {'X-Api-Key': macaroon};
-                console.log("[databox-request-with-macaroon] ", options.uri);
+                //console.log("[databox-request-with-macaroon] ", options.uri);
                 resolve(request(options,callback));
             })
             .catch((result)=>{

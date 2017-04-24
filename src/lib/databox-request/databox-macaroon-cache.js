@@ -19,7 +19,7 @@ function getMacaroon(host,path,method) {
     return new Promise((resolve, reject) => {
 
         if(macaroonCache[host+path+method]) {
-            console.log("[macaroonCache] returning cashed macaroon");
+            //console.log("[macaroonCache] returning cashed macaroon");
             //TODO check if the macaroon has expired? for now if a request fails we invalidate the macaroon
             resolve(macaroonCache[host+path+method]);
             return;

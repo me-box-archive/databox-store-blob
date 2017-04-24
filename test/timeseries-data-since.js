@@ -5,12 +5,12 @@ var assert = require('assert');
 
 
 var recordSet = []; // store res from can POST /data/since to test /data/range
+var lastRecord = {};
 
 describe('tests /ts/since', function() {
 	var data = {
 	    	"data": {new:"data", since:"world"},
 		}; 
-	var lastRecord = {};
 	
 	it("Adds records posted to :timestamp/ts", function(done) {
 		var data = {
@@ -38,8 +38,8 @@ describe('tests /ts/since', function() {
 					}
 					assert.deepEqual(result.body[0].data, {test:"data", hello:"world"});
 					lastRecord = result.body[0];
-					done();
 					console.log(lastRecord.timestamp);
+					done();
 				});
 	});
 
@@ -123,9 +123,12 @@ describe('tests /ts/since', function() {
 			.expect(200)
 			.end(function(err,result){
 				assert.deepEqual(result.body.data, {test:"data", hello:"world4"});
+					console.log("TOSH::",lastRecord.timestamp);
+
 				done();
 			});
 	});
+
 
 	it('can GET /ts/since with startTimestamp ' + lastRecord.timestamp  + ' and returns 6 items',function(done){
 		supertest
@@ -133,8 +136,9 @@ describe('tests /ts/since', function() {
 				.send({
 					startTimestamp: lastRecord.timestamp
 				})
-				.expect(200)
+				//.expect(200)
 				.end(function(err,result){
+					console.log("TOSH2::",lastRecord.timestamp);
 					if(err) {
 						assert.fail("","",err);
 						done();

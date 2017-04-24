@@ -25,15 +25,6 @@
     "url": "git+https://github.com/me-box/databox-store-blob.git"
   },
 
-  "network-permissions": [
-  ],
-  
-  "hardware-permissions": [
-  ],
-
-  "resource-requirements": {
-  },
-
   "volumes": [
               "/database"
   ]

@@ -6,8 +6,10 @@
     "registry": "localhost:5000"
   },
   "scripts": {
-    "test": "./node_modules/mocha/bin/mocha",
-    "start": "node --max-old-space-size=50  ./src/main.js",
+    "prestart": "mongod --dbpath database --fork --logpath /dev/null",
+    "pretest": "mongod --dbpath database --fork --logpath /dev/null",
+    "test": "NO_SECURITY=1 NO_LOGGING=1 /node_modules/mocha/bin/mocha",
+    "start": "node ./src/main.js",
     "build": "docker build -t databox/databox-store-blob .",
     "deploy": "docker tag databox/databox-store-blob $npm_package_config_registry/databox-store-blob && docker push $npm_package_config_registry/databox-store-blob",
     "build-arm": "docker build -f Dockerfile-arm -t databox/databox-store-blob-arm .",
@@ -33,10 +35,10 @@
     "express": "^4.14.0",
     "macaroons.js": "^0.3.6",
     "modclean": "",
+    "mongodb": "^2.2.0",
     "nedb": "^1.8.0",
     "node-uuid": "^1.4.7",
     "path-to-regexp": "^1.7.0",
-    "promise": "^7.1.1",
     "request": "^2.75.0",
     "ws": "^1.1.1"
   },
