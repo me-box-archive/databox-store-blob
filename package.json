@@ -3,10 +3,13 @@
   "version": "1.0.0",
   "description": "Datbox datastore for blob data",
   "config": {
-    "registry": "registry.iotdatabox.com"
+    "registry": "localhost:5000"
   },
   "scripts": {
-    "test": "./node_modules/mocha/bin/mocha",
+    "prestart": "mongod --dbpath database --fork --logpath /dev/null --wiredTigerEngineConfigString=\"cache_size=50M\"",
+    "pretest": "mongod --dbpath database --fork --logpath /dev/null --wiredTigerEngineConfigString=\"cache_size=50M\"",
+    "test": "NO_SECURITY=1 NO_LOGGING=1 /node_modules/mocha/bin/mocha",
+    "testincont": "docker run -t databox/databox-store-blob npm test",
     "start": "node ./src/main.js",
     "build": "docker build -t databox/databox-store-blob .",
     "deploy": "docker tag databox/databox-store-blob $npm_package_config_registry/databox-store-blob && docker push $npm_package_config_registry/databox-store-blob",
@@ -33,10 +36,10 @@
     "express": "^4.14.0",
     "macaroons.js": "^0.3.6",
     "modclean": "",
+    "mongodb": "^2.2.0",
     "nedb": "^1.8.0",
     "node-uuid": "^1.4.7",
     "path-to-regexp": "^1.7.0",
-    "promise": "^7.1.1",
     "request": "^2.75.0",
     "ws": "^1.1.1"
   },

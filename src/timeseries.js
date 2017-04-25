@@ -1,56 +1,103 @@
+/*jshint esversion: 6 */
 const Router = require('express').Router;
-const Datastore = require('nedb');
 
-const db = new Datastore({filename: '../database/datastore.db', autoload: true});
-db.ensureIndex({fieldName: 'datasource_id', unique: false});
-db.ensureIndex({fieldName: 'timestamp', unique: false});
-
-// TODO: Consider OOP-ing this whole thing
+const MongoClient = require('mongodb').MongoClient;
+let db = null;
+MongoClient.connect("mongodb://localhost:27017/db", function(err, mongo) {
+  if(!err) {
+    console.log("We are connected");
+	mongo.collection('timesseries', function(err, collection) {
+		if(!err) {
+			console.log("Timeseries collection created");
+			collection.createIndex( { "datasource_id": 1 }, { unique: false } );
+			collection.createIndex( { "timestamp": 1 }, { unique: false } );
+			db = collection;
+		}
+	});
+  } else {
+	  console.log("[ERROR] can't connect to mongo");
+  }
+});
 
 module.exports.api = function (subscriptionManager) {
-	var router = Router({mergeParams: true});
+	let router = Router({mergeParams: true});
 
-	var latest = function (req, res, next) {
-		var datasource_id = req.params.datasourceid;
-		db.find({ datasource_id: datasource_id }).sort({ timestamp: -1 }).limit(1).exec(function (err, doc) {
+	const latest = function (req, res, next) {
+		const datasource_id = req.params.datasourceid;
+		db.find({ datasource_id: datasource_id }).limit(1).sort({ timestamp: -1 }).toArray(function (err, doc) {
 			if (err) {
 				console.log('[Error]::', req.originalUrl);
 				// TODO: Status code + document
-				res.send(err);
+				res.status(400).send(err);
 				return
 			}
 			res.send(doc);
 		});
 	};
 
-	var since = function (req, res, next) {
-		var datasource_id = req.params.datasourceid;
-		var timestamp = req.body.startTimestamp;
-		db.find({ datasource_id, $where: function () { return this.timestamp >= timestamp; } }).sort({ timestamp: 1 }).exec(function (err, doc) {
+	const since = function (req, res, next) {
+		const datasource_id = req.params.datasourceid;
+		const timestamp = req.body.startTimestamp;
+		console.log("SINCE", datasource_id, timestamp);
+		db.find({ 'datasource_id': datasource_id, 'timestamp':{$gte:timestamp} }).sort({ 'timestamp': 1 }).toArray(function (err, doc) {
 			if (err) {
 				console.log('[Error]::', req.originalUrl, timestamp);
 				// TODO: Status code + document
-				res.send(err);
+				res.status(400).send(err);
 				return;
 			}
 			res.send(doc);
 		});
 	};
 
-	var range = function (req, res, next) {
-		var datasource_id = req.params.datasourceid;
-		var start = req.body.startTimestamp;
-		var end = req.body.endTimestamp;
+	const range = function (req, res, next) {
+		const datasource_id = req.params.datasourceid;
+		const start = req.body.startTimestamp;
+		const end = req.body.endTimestamp;
 
-		db.find({ datasource_id, $where: function () { return this.timestamp >= start && this.timestamp <= end; } }).sort({ timestamp: 1 }).exec(function (err, doc) {
+		db.find({ 'datasource_id': datasource_id, 'timestamp':{$gte:start, $lte:end}}).sort({ timestamp: 1 }).toArray(function (err, doc) {
 			if (err) {
 				console.log('[Error]::', req.originalUrl, timestamp);
 				// TODO: Status code + document
-				res.send(err);
+				res.status(400).send(err);
 				return;
 			}
 			res.send(doc);
 		});
+	};
+
+	const index = function (req, res, next) {
+		const indexName = req.body.index;
+		let options = {};
+		options[indexName] = 1;
+		db.createIndex(options, function (err) {
+			if (err) {
+				console.log('[Error]::', err);
+				res.status(400).send(err);
+				return;
+			}
+			res.send();
+		});
+	};
+
+	const query = function (req, res, next) {
+		try{
+			const query = JSON.parse(req.body.query);
+			const limit = req.body.limit || 0;
+			const sort = JSON.parse(req.body.sort || '{}');
+			console.log(query);
+			db.find(query).sort(sort).limit(limit).toArray(function (err,docs) {
+				if (err) {
+					console.log('[Error]::', err);
+					res.status(400).send(err);
+					return;
+				}
+				res.send(docs);
+			});
+		} catch (e) {
+			console.log('[Error]:: bad query',e);
+			res.status(400).send('[Error]:: bad query');
+		}
 	};
 
 	router.get('/', function (req, res, next) {
@@ -65,28 +112,41 @@ module.exports.api = function (subscriptionManager) {
 		if(cmd == 'range') {
 			range(req, res, next);
 		}
+		if(cmd == 'index') {
+			index(req, res, next);
+		}
+		if(cmd == 'query') {
+			query(req, res, next);
+		}
 		
 	});
 
 	// TODO: .all, see #15
 	router.post('/', function (req, res, next) {
+		
+		//trust the drivers timestamp
+		let timestamp = null;
+		if(req.body.data.timestamp && Number.isInteger(req.body.data.timestamp)) {
+			timestamp = req.body.data.timestamp;
+		} else {
+			timestamp = Date.now();
+		}
+		
 		var data = {
 			datasource_id: req.params.datasourceid,
 			'data': req.body.data,
-			'timestamp': Date.now()
+			'timestamp': timestamp
 		};
 
 		db.insert(data, function (err, doc) {
 			if (err) {
 				console.log('[Error]::', req.originalUrl, data, err);
 				// TODO: Status code + document
-				res.send(err);
+				res.status(400).send(err);
 				return;
 			}
-			res.send(doc);
+			res.send(doc.ops[0]);
 		});
-
-		console.log("New data written subscriptionManager.emit:",req.params.datasourceid + '/ts', data);
 		subscriptionManager.emit('/' + req.params.datasourceid + '/ts', data);
 	});
 

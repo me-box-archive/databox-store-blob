@@ -2,7 +2,7 @@
 
 # databox-store-blob
 
-Databox Store for JSON data blobs handles time series and key value data.
+Databox Store for JSON data blobs handles time series and key value data. Based on mongoDB.
 
 The datastore exposes an HTTP-based API on port 8080 and a WebSocket based API
 for live data. All requests must have arbiter tokens passed as per section 7.1
@@ -30,6 +30,13 @@ of the
     Body Parameters: <startTimestamp> and <endTimestamp> for the range.
     Notes: will return the all data between the provided start and end timestamps for the provided datasourceid.
 
+    URL: /<datasourceid>/query
+    method: GET
+    Body Parameters: <query> a string containing a mongoDB json query 
+    Body Parameters: <limit> an integer max number of documents to return 
+    Body Parameters: <sort> a string containing a mongoDB json sort object
+    Notes: returns an array of documents 
+    
 ### Key value pairs
 
     URL: /<key>/kv/
@@ -96,7 +103,7 @@ Connect to a websocket client to `/ws`. Then subscribe for data using:
     URL: /<datasourceid>/ts/
     Method: POST
     Parameters: Raw JSON body containing elements as follows {data: <json blob to store>}
-    Notes: Stores a value a timestamp is added on insertion
+    Notes: If there is a timestamp field in data it is used otherwise a timestamp is added on insertion 
 
 ### Key value pairs
 
@@ -142,5 +149,6 @@ Then restart the container manger to use you updated version.
 
 ## Testing
 
-    npm install --development
-    NO_SECURITY=1 NO_LOGGING=1 npm test
+To test the new data store in a container with its own mongoDB instance use: 
+
+    npm run build && npm run testincont

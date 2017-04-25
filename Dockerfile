@@ -1,13 +1,18 @@
-FROM node:alpine
+FROM alpine:edge
 
-ADD package.json package.json
+RUN \
+echo http://dl-4.alpinelinux.org/alpine/edge/testing >> /etc/apk/repositories && \
+apk add --no-cache mongodb && \
+apk add --no-cache nodejs-current-npm && \
+rm /usr/bin/mongoperf
+
+VOLUME /database
+
+#ADD package.json package.json
+ADD . .
 RUN npm install && npm run clean
 
-ADD . .
-
 LABEL databox.type="store"
-
-VOLUME ["/database"]
 
 EXPOSE 8080
 
