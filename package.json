@@ -6,9 +6,10 @@
     "registry": "localhost:5000"
   },
   "scripts": {
-    "prestart": "mongod --dbpath database --fork --logpath /dev/null",
-    "pretest": "mongod --dbpath database --fork --logpath /dev/null",
+    "prestart": "mongod --dbpath database --fork --logpath /dev/null --wiredTigerEngineConfigString=\"cache_size=50M\"",
+    "pretest": "mongod --dbpath database --fork --logpath /dev/null --wiredTigerEngineConfigString=\"cache_size=50M\"",
     "test": "NO_SECURITY=1 NO_LOGGING=1 /node_modules/mocha/bin/mocha",
+    "testincont": "docker run -t databox/databox-store-blob npm test",
     "start": "node ./src/main.js",
     "build": "docker build -t databox/databox-store-blob .",
     "deploy": "docker tag databox/databox-store-blob $npm_package_config_registry/databox-store-blob && docker push $npm_package_config_registry/databox-store-blob",
