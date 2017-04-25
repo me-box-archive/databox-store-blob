@@ -1,7 +1,9 @@
+sudo: required
 language: node_js
 node_js:
   - "6"
-env:
-  NO_SECURITY=1
 services:
-  - mongodb
+  - docker
+script:
+- npm run build
+- npm run testincont
