@@ -4,21 +4,29 @@ const bodyParser = require("body-parser");
 const WebSocketServer = require('ws').Server;
 const fs = require('fs');
 
-//const ARBITER_KEY = process.env.ARBITER_TOKEN;
-const ARBITER_KEY = fs.readFileSync("/run/secrets/ARBITER_TOKEN",{encoding:'base64'});
+let ARBITER_KEY = '';
+let HTTPS_SECRETS = {};
+let credentials = {};
+try {
+	//const ARBITER_KEY = process.env.ARBITER_TOKEN;
+	ARBITER_KEY = fs.readFileSync("/run/secrets/ARBITER_TOKEN",{encoding:'base64'});
+	//HTTPS certs created by the container mangers for this components HTTPS server.
+	HTTPS_SECRETS = JSON.parse( fs.readFileSync("/run/secrets/DATABOX_PEM") );
+	credentials = {
+		key:  HTTPS_SECRETS.clientprivate || '',
+		cert: HTTPS_SECRETS.clientcert || '',
+	};
+} catch (e) {
+	//secrets missing ;-(
+	ARBITER_KEY = '';
+	HTTPS_SECRETS = '';
+	credentials = {};
+}
 
 const NO_SECURITY = !!process.env.NO_SECURITY;
 const NO_LOGGING = !!process.env.NO_LOGGING;
 
 const PORT = process.env.PORT || 8080;
-
-//HTTPS certs created by the container mangers for this components HTTPS server.
-const HTTPS_SECRETS = JSON.parse( fs.readFileSync("/run/secrets/DATABOX_PEM") );
-var credentials = {
-	key:  HTTPS_SECRETS.clientprivate || '',
-	cert: HTTPS_SECRETS.clientcert || '',
-};
-
 
 const hypercat = require('./lib/hypercat/hypercat.js');
 const macaroonVerifier = require('./lib/macaroon/macaroon-verifier.js');
