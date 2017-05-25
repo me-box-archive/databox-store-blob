@@ -2,6 +2,31 @@ const https = require('https');
 const express = require("express");
 const bodyParser = require("body-parser");
 const WebSocketServer = require('ws').Server;
+const fs = require('fs');
+
+let ARBITER_KEY = '';
+let HTTPS_SECRETS = {};
+let credentials = {};
+try {
+	//const ARBITER_KEY = process.env.ARBITER_TOKEN;
+	ARBITER_KEY = fs.readFileSync("/run/secrets/ARBITER_TOKEN",{encoding:'base64'});
+	//HTTPS certs created by the container mangers for this components HTTPS server.
+	HTTPS_SECRETS = JSON.parse( fs.readFileSync("/run/secrets/DATABOX_PEM") );
+	credentials = {
+		key:  HTTPS_SECRETS.clientprivate || '',
+		cert: HTTPS_SECRETS.clientcert || '',
+	};
+} catch (e) {
+	//secrets missing ;-(
+	ARBITER_KEY = '';
+	HTTPS_SECRETS = '';
+	credentials = {};
+}
+
+const NO_SECURITY = !!process.env.NO_SECURITY;
+const NO_LOGGING = !!process.env.NO_LOGGING;
+
+const PORT = process.env.PORT || 8080;
 
 const hypercat = require('./lib/hypercat/hypercat.js');
 const macaroonVerifier = require('./lib/macaroon/macaroon-verifier.js');
@@ -13,20 +38,6 @@ const DATABOX_LOCAL_NAME = process.env.DATABOX_LOCAL_NAME || "databox-store-blob
 const DATABOX_LOCAL_PORT = process.env.DATABOX_LOCAL_PORT || 8080;
 const DATABOX_ARBITER_ENDPOINT = process.env.DATABOX_ARBITER_ENDPOINT || "https://databox-arbiter:8080";
 
-// TODO: Refactor token to key here and in CM to avoid confusion with bearer tokens
-const ARBITER_KEY = process.env.ARBITER_TOKEN;
-const NO_SECURITY = !!process.env.NO_SECURITY;
-const NO_LOGGING = !!process.env.NO_LOGGING;
-
-const PORT = process.env.PORT || 8080;
-
-//HTTPS certs created by the container mangers for this components HTTPS server.
-const HTTPS_SERVER_CERT = process.env.HTTPS_SERVER_CERT || '';
-const HTTPS_SERVER_PRIVATE_KEY = process.env.HTTPS_SERVER_PRIVATE_KEY || '';
-const credentials = {
-	key:  HTTPS_SERVER_PRIVATE_KEY,
-	cert: HTTPS_SERVER_CERT,
-};
 
 const app = express();
 

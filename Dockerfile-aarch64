@@ -1,4 +1,4 @@
-FROM node:alpine
+FROM forumi0721alpineaarch64/alpine-aarch64-nodejs
 
 ADD package.json package.json
 RUN npm install && npm run clean
